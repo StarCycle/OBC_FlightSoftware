@@ -39,11 +39,11 @@ SoftwareUpdateService SWupdate(fram, (uint8_t*)xtr(SW_VERSION));
 Service* services[] = { &ping, &reset, &hk, &test, &SWupdate };
 
 // ADCS board tasks
-//CommandHandler<PQ9Frame> cmdHandler(pq9bus, services, 5);
+CommandHandler<PQ9Frame> cmdHandler(pq9bus, services, 5);
 Task timerTask(periodicTask);
 Task* periodicTasks[] = {&timerTask};
 PeriodicTaskNotifier taskNotifier = PeriodicTaskNotifier(FCLOCK, periodicTasks, 1);
-Task* tasks[] = { &timerTask };
+Task* tasks[] = { &cmdHandler, &timerTask };
 
 volatile bool cmdReceivedFlag = false;
 DataFrame* receivedFrame;
@@ -56,7 +56,7 @@ void receivedCommand(DataFrame &newFrame)
 {
     cmdReceivedFlag = true;
     receivedFrame = &newFrame;
-    //cmdHandler.received(newFrame);
+    cmdHandler.received(newFrame);
 }
 
 void validCmd(void)
@@ -315,15 +315,15 @@ void main(void)
     // every time a command is correctly processed, call the watch-dog
     // TODO: put back the lambda function after bug in CCS has been fixed
     //cmdHandler.onValidCommand([]{ reset.kickInternalWatchDog(); });
-    //cmdHandler.onValidCommand(&validCmd);
+    cmdHandler.onValidCommand(&validCmd);
 
     serial.print("OBC booting...SLOT: ");
-        serial.println(Bootloader::getCurrentSlot(), DEC);
+    serial.println(Bootloader::getCurrentSlot(), DEC);
 
-        if(HAS_SW_VERSION == 1){
-            serial.print("SW_VERSION: ");
-            serial.println((const char*)xtr(SW_VERSION));
-        }
+    if(HAS_SW_VERSION == 1){
+        serial.print("SW_VERSION: ");
+        serial.println((const char*)xtr(SW_VERSION));
+    }
 
-    TaskManager::start(tasks, 1);
+    TaskManager::start(tasks, 2);
 }
