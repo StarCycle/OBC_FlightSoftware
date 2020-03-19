@@ -21,6 +21,9 @@ PQ9Bus pq9bus(3, GPIO_PORT_P9, GPIO_PIN0);
 // debug console handler
 DSerial serial;
 
+// HardwareMonitor
+HWMonitor hwMonitor(&fram);
+
 // services running in the system
 TestService test;
 PingService ping;
@@ -247,9 +250,8 @@ void periodicTask()
     reset.kickExternalWatchDog();
 
     // pingFriends
-    pingModules();
-
-    retrieveCommCommandsReply();
+    //pingModules();
+    //retrieveCommCommandsReply();
 
 }
 
@@ -298,6 +300,11 @@ void main(void)
     // - initialize the pins for the hardware watch-dog
     // - prepare the pin for power cycling the system
     reset.init();
+
+    //HWMonitor start
+    hwMonitor.readResetStatus();
+    hwMonitor.readCSStatus();
+    hwMonitor.readMCUTemp();
 
     // link the command handler to the PQ9 bus:
     // every time a new command is received, it will be forwarded to the command handler
