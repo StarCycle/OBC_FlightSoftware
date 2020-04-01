@@ -304,7 +304,6 @@ void main(void)
     //HWMonitor start
     hwMonitor.readResetStatus();
     hwMonitor.readCSStatus();
-    hwMonitor.readMCUTemp();
 
     // link the command handler to the PQ9 bus:
     // every time a new command is received, it will be forwarded to the command handler
