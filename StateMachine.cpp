@@ -35,18 +35,23 @@ StateMachine::StateMachine(const unsigned int count, void (*function)( void ), v
 void StateMachine::run() {
     switch(CurrentState) {
     case ACTIVATION:
+        //put TDEM code here
         activation::Activation();
         break;
     case SAFE:
+        //put TDEM code here
         //run safe mode code
         break;
     case DEPLOYMENT:
+        //put TDEM code here
         //run deployment code
         break;
     case ADCS:
+        //put TDEM code here
         //run ADCS code
         break;
     case NOMINAL:
+        //put TDEM code here
         //run nominal mode code
         break;
      }
