@@ -12,7 +12,6 @@
 #include "SLOT_SELECT.h"
 #include "SoftwareUpdateService.h"
 #include "Bootloader.h"
-#include "OBCTelemetryContainer.h"
 #include "msp.h"
 #include "DelfiPQcore.h"
 #include "PQ9Bus.h"
@@ -30,10 +29,10 @@
 #include "TMP100.h"
 #include "DSPI.h"
 #include "MB85RS.h"
-#include "TestService.h"
 #include "PeriodicTaskNotifier.h"
 #include "HWMonitor.h"
 #include "ADCManager.h"
+#include "StateMachine.h"
 
 #define FCLOCK 48000000
 
