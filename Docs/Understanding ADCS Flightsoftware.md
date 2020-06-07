@@ -1244,3 +1244,491 @@ Note that:
 
 # Bootloader
 
+```c++
+// Bootloader.h in DelfiPQcore
+
+class Bootloader{
+private:
+    MB85RS *fram;
+public:
+    uint8_t current_slot;
+    Bootloader(MB85RS &fram);
+    void JumpSlot();
+    static unsigned char getCurrentSlot();
+};
+
+// Bootloader.cpp in DelfiPQcore 
+
+#include "Bootloader.h"
+
+Bootloader::Bootloader(MB85RS &fram){
+    this->fram = &fram;
+    this->current_slot = this->getCurrentSlot();
+}
+
+unsigned char Bootloader::getCurrentSlot()
+{
+    // ...
+    return slotNumber;
+}
+
+void Bootloader::JumpSlot()
+{
+    uint8_t target_slot = 0;
+    current_slot = this->getCurrentSlot();
+
+    if(fram->ping()){
+        // Read target_slot from FRAM
+        this->fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
+        // If current slot == 0 and target_slot != 0
+        if((current_slot & 0x7F) == 0 && (target_slot & 0x7F) != 0){ 
+            //check nr of Reboots to reset targetslot to 0
+           uint8_t nrOfReboots = 0;
+           fram->read(FRAM_RESET_COUNTER + (target_slot & 0x7F), &nrOfReboots, 1); //get nr 'surprise' reboots of targets
+           Console::log("= Target: %d", (int) (target_slot & 0x7F));
+           Console::log("= Number of Reboots Target: %d", (int) nrOfReboots);
+           if(nrOfReboots > 10 && ((target_slot & 0x7F) != 0)){ //if the surprise reboots >10, reset boot target and reset reboot counter
+               Console::log("# Max amount of unintentional reboots!");
+               Console::log("# Resetting TargetSlot");
+               nrOfReboots = 0;
+               fram->write(FRAM_RESET_COUNTER + (target_slot & 0x7F), &nrOfReboots, 1);
+               fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
+               fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
+           }
+
+            //check Succesful boot flag for problems
+            uint8_t succesfulBootFlag = 0;
+            fram->read(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
+            if(succesfulBootFlag == 0){ //Boot is not succesful, fallback on default slot.
+                Console::log("# Last Boot unsuccesful, resetting TargetSlot");
+                this->fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
+                this->fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
+                succesfulBootFlag = 1; //reset bootflag.
+                fram->write(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
+            }
+
+            //No problems encountered prep for jump if target is still set
+            if((target_slot & 0x7F) != 0){
+                Console::log("= Target slot: %d", (int)(target_slot & 0x7F));
+                Console::log("= Permanent Jump: %s", ((target_slot & BOOT_PERMANENT_FLAG) > 0) ? "YES" : "NO"); //permanent jump flag is set (not a one time jump)
+
+                if((target_slot & BOOT_PERMANENT_FLAG) == 0) {
+                    Console::log("+ Preparing One-time jump");
+                    this->fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
+                } else {
+                    Console::log("+ Preparing Permanent jump");
+                    //this->fram->write(FRAM_TARGET_SLOT, &current_slot, 1); //reset target to slot0
+                }
+
+                //lowerBootSuccesFlag before jump
+                uint8_t succesfulBootFlag = 0;
+                this->fram->write(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
+
+                MAP_Interrupt_disableMaster();
+                MAP_WDT_A_holdTimer();
+
+                uint32_t* resetPtr = 0;
+                switch((target_slot & 0x7F)) {
+                    case 0:
+                        resetPtr = (uint32_t*)(0x00000 + 4);
+                        break;
+                    case 1:
+                        resetPtr = (uint32_t*)(0x20000 + 4);
+                        break;
+                    case 2:
+                        resetPtr = (uint32_t*)(0x30000 + 4);
+                        break;
+                    default:
+                        Console::log("+ BOOTLOADER - Error: target slot not valid!");
+                        target_slot = BOOT_PERMANENT_FLAG; //set target to 0 and reboot
+                        this->fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
+                        MAP_SysCtl_rebootDevice();
+                        break;
+                }
+                Console::log("Jumping to: 0x%x", (int) *resetPtr);
+                Console::log("=============================================");
+
+                void (*slotPtr)(void) = (void (*)())(*resetPtr);
+
+                slotPtr();  //This is the jump!
+
+                while(1){
+                    Console::log("Why are we here?"); //should never end up here
+                }
+            }else{
+                //not jumping anymore
+                Console::log("=============================================");
+            }
+
+        }else if((current_slot & 0x7F) != 0){
+            //In target slot succesfully, hence it is a succesful boot
+            uint8_t succesfulBootFlag = 1; //reset bootflag.
+            fram->write(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
+            Console::log("=============================================");
+        }else{ //In the default slot, but no target is set
+            Console::log("=============================================");
+        }
+    }else{ //fram did not ping
+        Console::log("# FRAM Unavailable!");
+        Console::log("=============================================");
+    }
+}
+```
+
+Note that:
+
+1. JumpSlot() will be run in main.cpp
+2. The Bootloader works according to data in FRAM (both reading and writing).
+3. It only jumps when the current slot == 0 and the target slot != 0. If the number of reboots > 10 or boot is not successful, the Bootloader will set target slot = 0 and go back to the default software.
+4. Currently we can have a permanent jump or a one-time jump (set the next target slot = 0 before the jump).
+5. The Bootloader finally runs the functions in 0x00004, 0x20004 or 0x30004.
+6. **I don't fully understand the Bootloader since I am not very familiar with the hardware.**
+
+
+
+# Hardware Monitor
+
+```c++
+// HWMonitor.h in DelfiPQcore
+
+class HWMonitor
+{
+ protected:
+     MB85RS *fram = 0;
+     bool hasFram = false;
+
+     uint32_t resetStatus = 0;
+     uint32_t CSStatus = 0;
+
+     uint32_t cal30;
+     uint32_t cal85;
+     volatile float calDifference;
+
+     uint16_t MCUTemp = 0;
+    
+ public:
+     HWMonitor( MB85RS* fram  );
+     HWMonitor();
+
+     void readResetStatus();
+     void readCSStatus();
+
+     uint32_t getResetStatus();
+     uint32_t getCSStatus();
+     uint16_t getMCUTemp();
+};
+
+// HWMonitor.cpp in DelfiPQcore
+
+#include "HWMonitor.h"
+
+HWMonitor::HWMonitor(MB85RS* fram_in){
+    this->fram = fram_in;
+    this->hasFram = true;
+}
+
+HWMonitor::HWMonitor(){
+    this->hasFram = false;
+}
+
+uint32_t HWMonitor::getResetStatus(){
+    return resetStatus;
+}
+
+uint32_t HWMonitor::getCSStatus(){
+    return CSStatus;
+}
+
+uint16_t HWMonitor::getMCUTemp(){
+    this->MCUTemp = 10*ADCManager::getTempMeasurement();
+    return MCUTemp;
+}
+
+void HWMonitor::readCSStatus(){
+    //Get and clear CLOCK FAULT STATUS
+    Console::log("========== HWMonitor: Clock Faults ==========");
+    this->CSStatus  = CS->IFG;
+    
+    Console::log("CS FAULTS: %x", CSStatus);
+    
+    if( CheckResetSRC(CSStatus, CS_IFG_LFXTIFG)){
+        Console::log("- Fault in LFXT");
+    }
+    if( CheckResetSRC(CSStatus, CS_IFG_HFXTIFG)){
+        Console::log("- Fault in HFXT");
+    }
+    if( CheckResetSRC(CSStatus, CS_IFG_DCOR_SHTIFG)){
+        Console::log("- DCO Short Circuit!");
+    }
+    if( CheckResetSRC(CSStatus, CS_IFG_DCOR_OPNIFG)){
+        Console::log("- DCO Open Circuit!");
+    }
+    if( CheckResetSRC(CSStatus, CS_IFG_FCNTLFIFG)){
+        Console::log("- LFXT Start-count expired!");
+    }
+    if( CheckResetSRC(CSStatus, CS_IFG_FCNTHFIFG)){
+        Console::log("- HFXT Start-count expired!");
+    }
+
+    CS->CLRIFG |= CS_CLRIFG_CLR_LFXTIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_HFXTIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_DCOR_OPNIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_FCNTLFIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_FCNTHFIFG;
+    CS->CLRIFG |= CS_SETIFG_SET_LFXTIFG;
+
+    Console::log("=============================================");
+}
+
+bool CheckResetSRC(uint32_t Code, uint32_t SRC){
+    return ((Code & SRC) == SRC);
+}
+
+void HWMonitor::readResetStatus(){
+    //Get and Clear ResetRegisters
+    Console::log("========== HWMonitor: Reboot Cause ==========");
+    this->resetStatus  = (RSTCTL->HARDRESET_STAT   & 0x0F) | ((RSTCTL->HARDRESET_STAT & 0xC000) >> 10);
+    this->resetStatus |= (RSTCTL->SOFTRESET_STAT   & 0x07) << 6;
+    this->resetStatus |= (RSTCTL->PSSRESET_STAT    & 0x0E) << 8;
+    this->resetStatus |= (RSTCTL->PCMRESET_STAT    & 0x03) << 12;
+    this->resetStatus |= (RSTCTL->PINRESET_STAT    & 0x01) << 14;
+    this->resetStatus |= (RSTCTL->REBOOTRESET_STAT & 0x01) << 15;
+    this->resetStatus |= (RSTCTL->CSRESET_STAT     & 0x01) << 16;
+    MAP_ResetCtl_clearHardResetSource(((uint32_t) 0x0000FFFF));
+    MAP_ResetCtl_clearSoftResetSource(((uint32_t) 0x0000FFFF));
+    MAP_ResetCtl_clearPSSFlags();
+    MAP_ResetCtl_clearPCMFlags();
+    RSTCTL->PINRESET_CLR |= (uint32_t) 0x01;
+    RSTCTL->REBOOTRESET_CLR |= (uint32_t) 0x01;
+    RSTCTL->CSRESET_CLR |= (uint32_t) 0x01;
+
+    Console::log("RESET STATUS: %x", resetStatus);
+
+    if( CheckResetSRC(resetStatus, RESET_HARD_SYSTEMREQ)){
+        Console::log("- POR Caused by System Reset Output of Cortex-M4");
+    }
+    if( CheckResetSRC(resetStatus, RESET_HARD_WDTTIME)){
+        Console::log("- POR Caused by HardReset WDT Timer expiration!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_HARD_WDTPW_SRC)){
+        Console::log("- POR Caused by HardReset WDT Wrong Password!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_HARD_FCTL)){
+        Console::log("- POR Caused by FCTL detecting a voltage Anomaly!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_HARD_CS)){
+        Console::log("- POR Extended for Clock Settle!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_HARD_PCM) ){
+        Console::log("- POR Extended for Power Settle!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_SOFT_CPULOCKUP) ){
+        Console::log("- POR Caused by CPU Lock-up!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_SOFT_WDTTIME) ){
+        Console::log("- POR Caused by SoftReset WDT Timer expiration!!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_SOFT_WDTPW_SRC) ){
+        Console::log("- POR Caused by SoftReset WDT Wrong Password!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_PSS_VCCDET) ){
+        Console::log("- POR Caused by VCC Detector trip condition!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_PSS_SVSH_TRIP) ){
+        Console::log("- POR Caused by Supply Supervisor detected Vcc trip condition!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_PSS_BGREF_BAD) ){
+        Console::log("- POR Caused by Bad Band Gap Reference!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_PCM_LPM35) ){
+        Console::log("- POR Caused by PCM due to exit from LPM3.5!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_PCM_LPM45) ){
+        Console::log("- POR Caused by PCM due to exit from LPM4.5!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_PIN_NMI) ){
+        Console::log("- POR Caused by NMI Pin based event!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_REBOOT) ){
+        Console::log("- POR Caused by SysCTL Reboot!");
+    }
+    if( CheckResetSRC(resetStatus, RESET_CSRESET_DCOSHORT)){
+        Console::log("- POR Caused by DCO short circuit fault in external resistor!");
+    }
+
+    if(hasFram){
+        if(fram->ping()){
+            Console::log("+ FRAM present");
+            this->fram->write(FRAM_RESET_CAUSE, &((uint8_t*)&resetStatus)[1], 3);
+            uint8_t resetCounter = 0;
+            Console::log("+ Current Slot: %d", (int) Bootloader::getCurrentSlot());
+            fram->read(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
+            if(!CheckResetSRC(resetStatus, RESET_REBOOT)){
+                Console::log("+ Unintentional reset!");
+                resetCounter++;
+                fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
+            }else{
+                Console::log("+ Intentional reset");
+                resetCounter = 0;
+                fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
+            }
+            Console::log("+ Reset counter at: %d", (int) resetCounter);
+        }else{
+            Console::log("# FRAM unavailable");
+        }
+    }else{
+        Console::log("# FRAM unavailable");
+    }
+
+    Console::log("=============================================");
+}
+```
+
+Note that:
+
+1. readResetStatus() and readCCStatus() will be run in main.cpp
+2. They basically read and them clear registers in the MCU. The results are also shown in the console.
+3. Number of **unintended** resets will be recorded in FRAM. It can be used in the Bootloader.
+4. A useful function is getMCUTemp(), which calls the ADC Manager.
+5. **I don't fully understand the Bootloader since I am not very familiar with the hardware.**
+
+
+
+# ADC Manager
+
+```c++
+// ADCManager.h in DelfiPQcore
+
+class ADCManager
+{
+private:
+    ADCManager();
+    static unsigned int enabledADCMem;
+    static unsigned int NrOfActiveADC;
+    static const uint32_t MemoryLocations[32];
+
+public:
+    static void initADC();
+    static void enableTempMeasurement();
+    static float getTempMeasurement();
+    static void executeADC();
+    static int registerADC(const unsigned long ADCPin);
+    static uint16_t getMeasurementRaw(int memNumber);
+    static uint16_t getMeasurementVolt(int memNumber);
+};
+
+// ADCManager.cpp in DelfiPQcore
+
+#include "ADCManager.h"
+
+unsigned int ADCManager::enabledADCMem = 0;
+unsigned int ADCManager::NrOfActiveADC = 0;
+
+const uint32_t ADCManager::MemoryLocations[32] = {ADC_MEM0,ADC_MEM1,ADC_MEM2,ADC_MEM3,ADC_MEM4,ADC_MEM5,ADC_MEM6,ADC_MEM7,ADC_MEM8,ADC_MEM9,ADC_MEM10,ADC_MEM11,ADC_MEM12,ADC_MEM13,ADC_MEM14,ADC_MEM15,ADC_MEM16,ADC_MEM17,ADC_MEM18,ADC_MEM19,ADC_MEM20,ADC_MEM21,ADC_MEM22,ADC_MEM23,ADC_MEM24,ADC_MEM25,ADC_MEM26,ADC_MEM27,ADC_MEM28,ADC_MEM29,ADC_MEM30,ADC_MEM31};
+
+void ADCManager::initADC(){
+    /* Initializing ADC (MCLK/1/1) with temperature sensor routed */
+    // ...
+
+    /* Configuring the sample/hold time for 192 */
+    // ...
+
+    /* Enabling sample timer in auto iteration mode and interrupts*/
+	// ...
+    
+    //Enabling the FPU with stacking enabled (for use within ISR)
+    // ...
+
+    /* Setting reference voltage to 2.5 and enabling temperature sensor */
+    // ...
+}
+
+void ADCManager::enableTempMeasurement(){
+/* Configuring ADC Memory (ADC_MEM22 A22 (Temperature Sensor) in repeat ) */
+    // ...
+}
+
+float ADCManager::getTempMeasurement(){
+    // ...
+}
+
+void ADCManager::executeADC(){
+    MAP_ADC14_disableConversion();
+    if(NrOfActiveADC == 0){
+        return; //no active ADC
+    }else if(NrOfActiveADC == 1){
+        MAP_ADC14_configureSingleSampleMode(ADC_MEM0, true); //only MEM0 is active
+    }else if(NrOfActiveADC < 32){
+        //NrOfActive > 0 but not 1
+        MAP_ADC14_configureMultiSequenceMode(ADC_MEM0, MemoryLocations[NrOfActiveADC-1], true);
+    }else{
+        //should never happen
+        Console::log("ADCManager: impossible configuration!");
+        return;
+    }
+    /* Triggering the start of the sample */
+    MAP_ADC14_enableConversion();
+    MAP_ADC14_toggleConversionTrigger();
+}
+
+/*
+ * registerADC()
+ * parameter: (ADC Pin number)
+ * returns: ADC Mem Location
+ *
+ * Description:
+ *  Register an Analog Pin to the ADC to be measured continuously.
+ *  If a ADC 'slot' is available, the Manager will return a number with the Memory location,
+ *  which can be used to obtain the measured result using getMeasurement(int memNumber)
+ */
+int ADCManager::registerADC(unsigned long ADCPin){
+    if((NrOfActiveADC < 32) && (NrOfActiveADC > 0)){ //ADC Slot Available
+        int newRegisteredMem = NrOfActiveADC;
+        MAP_ADC14_configureConversionMemory(MemoryLocations[newRegisteredMem], ADC_VREFPOS_INTBUF_VREFNEG_VSS, ADCPin, false);
+
+        enabledADCMem |= (1 << newRegisteredMem);
+        NrOfActiveADC += 1;
+        ADCManager::executeADC();
+
+        return newRegisteredMem;
+    } else {
+        return -1;
+    }
+}
+
+/*
+ * getMeasurementRaw()
+ * parameter: (MEM address number)
+ * returns: ADC measurement [in bits]
+ *
+ * Description:
+ *  Get the latest measurement from the ADCManager of the selected Memory
+ *
+ */
+uint16_t ADCManager::getMeasurementRaw(int memNumber){
+    return MAP_ADC14_getResult(MemoryLocations[memNumber]);
+}
+
+/*
+ * getMeasurementRaw()
+ * parameter: (MEM address number)
+ * returns: ADC measurement [in mV]
+ *
+ * Description:
+ *  Get the latest measurement from the ADCManager of the selected Memory
+ *
+ */
+uint16_t ADCManager::getMeasurementVolt(int memNumber){
+    return (MAP_ADC14_getResult(MemoryLocations[memNumber]) * 2500 / 16384);
+}
+```
+
+Note that:
+
+1. There is a temperature sensor in the AD converter.
+2. `executeADC()` kicks off the start of sampling, which works in the repeat mode. In this case, the converter will not stop sampling until the next `MAP_ADC14_toggleConversionTrigger()`
+3. `registerADC()` can add a new sampling channel.
+4. The results will be saved in `MemoryLocations[memNumber]`, which can be accessed by `getMeasurementRaw()` or `getMeasurementVolt()`.
+5. `getTempMeasurement()` returns a float. The FPU is used here.
+6. **I don't fully understand the Bootloader since I am not very familiar with the hardware.**
+

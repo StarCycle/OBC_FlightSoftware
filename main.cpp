@@ -50,9 +50,6 @@ void main(void)
 
     // initialize the shunt resistor
     powerBus.setShuntResistor(40);
-    torquerX.setShuntResistor(40);
-    torquerY.setShuntResistor(40);
-    torquerZ.setShuntResistor(40);
 
     // initialize temperature sensor
     temp.init();
