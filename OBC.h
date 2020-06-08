@@ -33,13 +33,10 @@
 #include "HWMonitor.h"
 #include "ADCManager.h"
 #include "StateMachine.h"
+#include "CommonFunctions.h"
 
 #define FCLOCK 48000000
 
 #define ADCS_ADDRESS     5
-
-// callback functions
-void acquireTelemetry(OBCTelemetryContainer *tc);
-void periodicTask();
 
 #endif /* OBC_H_ */

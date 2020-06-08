@@ -18,6 +18,9 @@ Bootloader bootLoader = Bootloader(fram);
 // CDHS bus handler
 PQ9Bus pq9bus(3, GPIO_PORT_P9, GPIO_PIN0);
 
+// services running in the system
+ResetService reset( GPIO_PORT_P4, GPIO_PIN0 );
+
 // OBC board tasks
 PeriodicTask stateMachineTask(1000, StateMachine);
 // PeriodicTask SDCardTask(1000, SDCardAccess); // TODO
@@ -66,7 +69,7 @@ void main(void)
     // - prepare the watch-dog
     // - initialize the pins for the hardware watch-dog
     // - prepare the pin for power cycling the system
-    // reset.init();
+    reset.init();
 
     // initialize Task Notifier
     taskNotifier.init();
@@ -80,11 +83,6 @@ void main(void)
     // TODO: put back the lambda function after bug in CCS has been fixed
     //pq9bus.setReceiveHandler([](PQ9Frame &newFrame){ cmdHandler.received(newFrame); });
     pq9bus.setReceiveHandler(&receivedCommand);
-
-    // every time a command is correctly processed, call the watch-dog
-    // TODO: put back the lambda function after bug in CCS has been fixed
-    //cmdHandler.onValidCommand([]{ reset.kickInternalWatchDog(); });
-    //cmdHandler.onValidCommand(&validCmd);
 
     Console::log("OBC booting...SLOT: %d", (int) Bootloader::getCurrentSlot());
 
