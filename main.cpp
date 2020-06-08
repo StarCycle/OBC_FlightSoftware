@@ -66,7 +66,7 @@ void main(void)
     // - prepare the watch-dog
     // - initialize the pins for the hardware watch-dog
     // - prepare the pin for power cycling the system
-    reset.init();
+    // reset.init();
 
     // initialize Task Notifier
     taskNotifier.init();

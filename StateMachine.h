@@ -8,7 +8,7 @@
 #ifndef OBCSTATEMACHINE_H_
 #define OBCSTATEMACHINE_H_
 
-#include "CommonFunctions.h"
+// #include "CommonFunctions.h"
 #include "ActivationMode.h"
 // #include "DeploymentMode.h"
 // #include "SafeMode.h"
