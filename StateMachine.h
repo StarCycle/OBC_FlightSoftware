@@ -8,14 +8,7 @@
 #ifndef OBCSTATEMACHINE_H_
 #define OBCSTATEMACHINE_H_
 
-// #include "CommonFunctions.h"
-#include "ActivationMode.h"
-// #include "DeploymentMode.h"
-// #include "SafeMode.h"
-// #include "ADCSMode.h"
-// #include "NominalMode.h"
-
-enum Mode {ACTIVATION, DEPLOYMENT, SAFE, ADCS, NOMINAL};
+typedef enum Mode {ACTIVATION, DEPLOYMENT, SAFE, ADCS, NOMINAL} Mode;
 
 void StateMachine();
 

@@ -5,7 +5,7 @@
  *      Author: Zhuoheng Li
  */
 
-#include "CommonFunctions.h"
+#include "DataFrame.h"
 
 volatile bool cmdReceivedFlag = false;
 DataFrame* receivedFrame;

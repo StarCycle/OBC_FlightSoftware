@@ -6,8 +6,14 @@
  */
 
 #include "StateMachine.h"
+#include "CommonFunctions.h"
+#include "ActivationMode.h"
+// #include "DeploymentMode.h"
+// #include "SafeMode.h"
+// #include "ADCSMode.h"
+// #include "NominalMode.h"
 
-enum Mode currentMode = ACTIVATION; // Initial state
+Mode currentMode = ACTIVATION; // Initial state
 unsigned long uptime = 0; // uptime since last boot
 unsigned long totalUpTime; // uptime since the first boot
 unsigned long OBCBootCount;
