@@ -1,13 +1,12 @@
 /*
- * ActivationMode.cpp
+ *  ActivationMode.cpp
  *
- *  Created on: May 20, 2020
- *      Author: tom-h
+ *  Created on: June 10, 2020
+ *      Author: Zhuoheng Li
  */
 
-#include "Activationmode.hpp"
+#include <ActivationMode.h>
 
-using namespace activation;
 void SetUpFirstBoot() {
     BootCount = 0;
 }
@@ -54,7 +53,7 @@ void TimerDoneFunc(StateMachine& object) {
 
 
 }
-void Activation() {
+void ActivationMode() {
     SetUpFirstBoot();
     LoadSD();
 

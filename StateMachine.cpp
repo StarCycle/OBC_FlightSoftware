@@ -6,80 +6,70 @@
  */
 
 #include "StateMachine.h"
+#include "ActivationMode.h"
+#include "Console.h"
 
 /**
  *
- *   Construct TaskManager, based on task
+ *   Define which state it should be and call relative functions.
+ *   Override run() in Task.h
  *
  *   Parameters:
- *      const unsigned int count        Period of the task in multiples of 100ms
- *      void (*function)                The function to Execute
- *      void (*init)                    The Initializer of the Function
+ *
  *   Returns:
- *      nothing
  *
  */
-StateMachine::StateMachine(const unsigned int count, void (*function)( void ), void (&init)( void )) :
-        Task(function, init)
-{
-    this->StateMachineCount = count;
-}
-
-/**
- * Run TaskManager
- * Function which reads the state and
- * according to this state runs the corresponding
- * task
- */
-
 void StateMachine::run() {
-    switch(CurrentState) {
-    case ACTIVATION:
-        //put TDEM code here
-        activation::Activation();
-        break;
-    case SAFE:
-        //put TDEM code here
-        //run safe mode code
-        break;
-    case DEPLOYMENT:
-        //put TDEM code here
-        //run deployment code
-        break;
-    case ADCS:
-        //put TDEM code here
-        //run ADCS code
-        break;
-    case NOMINAL:
-        //put TDEM code here
-        //run nominal mode code
-        break;
+
+    //put TDEM code here
+
+    switch(currentMode) {
+        case ACTIVATION:
+            ActivationMode();
+            break;
+        case DEPLOYMENT:
+            //run safe mode code
+            break;
+        case SAFE:
+            //run deployment code
+            break;
+        case ADCS:
+            //run ADCS code
+            break;
+        case NOMINAL:
+            //run nominal mode code
+            break;
      }
 }
 
-/*
- * Setup TaskManager task
- * An instance is created of the class
+/**
+ *
+ *   Override notified() in Task.h so StateMachine is notified in every loop!
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *      true (1)
  */
+bool StateMachine::notified() {
+    return true;
+}
 
-void StateMachine::SetUp() {
-#ifndef TESTING
-    console::log("Statemachine setup called");
-#endif
-    (*StateMachineTask).CurrentState = ACTIVATION;
+/**
+ *
+ *   Initial setting. Override setUp() in Task.h
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ */
+void StateMachine::setUp() {
 
-    activation::TimerDone = false;
-    //Read TimerDone status from SD
+    Console::log("Statemachine setup called");
 
-    //read uptime from SD or smth to make sure it is not the uptime since last reboot
-    //but since beginning
-    //upTimeSD = ReadSD[7];
-    //checks if there is a value at the described position, might have to be done
-    //differently as there is probably a random value at specified location
-//    if(upTimeSD > 0) {
-//
-//        upTime = upTimeSD;
-//    }
-//    else
-        upTime = 0;
+    currentMode = ACTIVATION; // initial mode
+
+    upTime = 0;
+    // TODO: load totalUpTime & OBCBootCount from FRAM
 }
