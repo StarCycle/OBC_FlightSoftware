@@ -69,7 +69,9 @@ void StateMachine::setUp() {
     Console::log("Statemachine setup called");
 
     currentMode = ACTIVATION; // initial mode
-
     upTime = 0;
+    totalUpTime = 0; // TODO
+    OBCBootCount = 1; // TODO
+
     // TODO: load totalUpTime & OBCBootCount from FRAM
 }

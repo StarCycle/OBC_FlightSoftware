@@ -8,7 +8,7 @@
 #ifndef OBCDATACONTAINER_H_
 #define OBCDATACONTAINER_H_
 
-#define OBC_DATACONTAINER_SIZE  40  // TODO
+#define OBC_DATACONTAINER_SIZE  59
 
 typedef enum Mode {ACTIVATION, DEPLOYMENT, SAFE, ADCS, NOMINAL} Mode;
 typedef enum ActivationState  {NOTDONE, DONE} ActivationState;
@@ -35,11 +35,10 @@ public:
     unsigned long getBootCount();
     void setBootCount(unsigned long count);
 
-    // Uptime since the last boot
-    unsigned long getUpTime();
+    unsigned long getUpTime(); // Uptime since the last boot
     void setUpTime(unsigned long uplong);
 
-    unsigned long getTotalUpTime();
+    unsigned long getTotalUpTime(); // Uptime since the first boot
     void setTotalUpTime(unsigned long uplong);
 
     unsigned short getBatteryVoltage();
@@ -49,77 +48,59 @@ public:
 
     // Variables in the activation mode
 
-    bool getTimerDone();
-    void setTimerDone(bool timerdone);
+    ActivationState getActivationState();
+    void setActivationState(ActivationState state);
 
-    unsigned long getActivationParameter();
-    void getActivationParameter(unsigned long uplong);
+    unsigned long getEndOfActivation();
+    void setEndOfActivation(unsigned long uplong);
 
     // Variables in the deployment mode
 
-    bool getDeployment();
-    void setDeployment(bool deploy);
+    DeployState getDeployState();
+    void setDeployState(DeployState state);
+
+    unsigned long getEndOfDeployState();
+    void setEndOfDeployState(unsigned long uplong);
 
     unsigned short getDeployVoltage();
     void setDeployVoltage(unsigned short deployvolt);
 
-    DeployState getDeployStatus();
-    void setDeployStatus(DeployState state);
+    unsigned long getForcedDeployParameter();
+    void setForcedDeployParameter(unsigned long uplong);
 
-    //time assigned for normal deployment after which special measures will be taken
-    unsigned short getDeployEnd();
-    void setDeployEnd(unsigned short deployend);
+    unsigned long getDeployDelayParameter();
+    void setDeployDelayParameter(unsigned long uplong);
 
-    //delay parameter set to alter the deploytime
-    unsigned short getDeployTime();
-    void setDeployTime(unsigned short delaytime);
-
-    unsigned short getDelayEnd();
-    void setDelayEnd(unsigned short delayend);
-
-    unsigned short getDeployDelay();
-    void setDeployDelay(unsigned short deploydelay);
+    // Variables in the safe mode
 
     unsigned short getSMVoltage();
     void setSMVoltage(unsigned short safevolt);
 
-    bool getADCSEnable();
-    void setADCSEnable(bool flag);
+    // Variables in the ADCS mode
 
-    ADCSState getADCSStatus();
-    void setADCSStatus(ADCSState state);
+    ADCSState getADCSState();
+    void setADCSState(ADCSState state);
 
-    PowerState getADCSPowerStatus();
-    void setADCSPowerStatus(PowerState state);
+    unsigned long getEndOfADCSState();
+    void setEndOfADCSState(unsigned long uplong);
 
-    //set variable to set time to detumble
-    unsigned short getPowerCycleTime();
-    void setPowerCycleTime(unsigned short time);
+    unsigned short getRotateSpeed(); // TODO: signed or unsigned?
+    void setRotateSpeed(unsigned short value);
 
-    //time set to indicate power cycling can end, why?
-    unsigned short getPowerEnd();
-    void setPowerEnd(unsigned short time);
+    unsigned short getRotateSpeedLimit(); // TODO: signed or unsigned?
+    void setRotateSpeedLimit(unsigned short value);
 
-    //time set to indicate initialization time is done
-    unsigned short getInitEnd();
-    void setInitEnd(unsigned short time);
+    unsigned long getDetumblingPeriod();
+    void setDetumblingPeriod(unsigned long uplong);
 
-    signed short getOmega();
-    void setOmega(signed short value);
+    PowerState getADCSPowerState();
+    void setADCSPowerState(PowerState state);
 
-    //treshold set when the rotational speed is acceptable
-    signed short getMaxOmega();
-    void setMaxOmega(signed short value);
+    unsigned long getEndOfADCSPowerState();
+    void setEndOfADCSPowerState(unsigned long uplong);
 
-    //Time which the spacecraft will detumble for
-    unsigned short getDetumbleTime();
-    void setDetumbleTime(unsigned short time);
-
-    //time at which detumbling will end
-    unsigned short getDetumbleEnd();
-    void setDetumbleEnd(unsigned short time);
+    unsigned long getADCSPowerCyclePeriod();
+    void setADCSPowerCyclePeriod(unsigned long uplong);
 };
-
-
 
 #endif /* OBCDATACONTAINER_H_ */

@@ -3,9 +3,6 @@
 // I2C bus
 DWire I2Cinternal(0);
 INA226 powerBus(I2Cinternal, 0x40);
-INA226 torquerX(I2Cinternal, 0x41);
-INA226 torquerY(I2Cinternal, 0x42);
-INA226 torquerZ(I2Cinternal, 0x43);
 TMP100 temp(I2Cinternal, 0x48);
 
 // SPI bus
@@ -18,35 +15,18 @@ HWMonitor hwMonitor(&fram);
 // Bootloader
 Bootloader bootLoader = Bootloader(fram);
 
+// Data container
+OBCDataContainer dataContainer;
+
 // CDHS bus handler
 PQ9Bus pq9bus(3, GPIO_PORT_P9, GPIO_PIN0);
 
 // services running in the system
-TestService test;
-PingService ping;
 ResetService reset( GPIO_PORT_P4, GPIO_PIN0);
-HousekeepingService<OBCTelemetryContainer> hk;
 
-#ifndef SW_VERSION
-SoftwareUpdateService SWupdate(fram);
-#else
-SoftwareUpdateService SWupdate(fram, (uint8_t*)xtr(SW_VERSION));
-#endif
-
-Service* services[] = { &ping, &reset, &hk, &test, &SWupdate };
-
-// ADCS board tasks
-//CommandHandler<PQ9Frame> cmdHandler(pq9bus, services, 5);
-PeriodicTask timerTask(1000, periodicTask);
-PeriodicTask* periodicTasks[] = {&timerTask};
-PeriodicTaskNotifier taskNotifier = PeriodicTaskNotifier(periodicTasks, 1);
-Task* tasks[] = { &timerTask };
-
-volatile bool cmdReceivedFlag = false;
-DataFrame* receivedFrame;
-
-// system uptime
-unsigned long uptime = 0;
+// OBC board tasks
+StateMachine stateMachineTask(&dataContainer);
+Task* tasks[] = { &stateMachineTask };
 
 // TODO: remove when bug in CCS has been solved
 void receivedCommand(DataFrame &newFrame)

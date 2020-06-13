@@ -9,19 +9,23 @@
 #define STATEMACHINE_H_
 
 #include "Task.h"
+#include "OBCDataContainer.h"
 
 class StateMachine : public Task
 {
 private:
     Mode currentMode;
-    uint32_t upTime;
-    uint32_t totalUpTime;
-    uint32_t OBCBootCount;
+    unsigned long upTime;
+    unsigned long totalUpTime;
+    unsigned long OBCBootCount;
+    OBCDataContainer * containerPointer;
 
 protected:
     void run();
 
 public:
+    StateMachine(OBCDataContainer *container) :
+        Task(), containerPointer(container) {};
     bool notified( void );
     void setUp();
 };

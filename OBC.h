@@ -30,10 +30,11 @@
 #include "TMP100.h"
 #include "DSPI.h"
 #include "MB85RS.h"
-#include "TestService.h"
 #include "PeriodicTaskNotifier.h"
 #include "HWMonitor.h"
 #include "ADCManager.h"
+#include "StateMachine.h"
+#include "OBCDataContainer.h"
 
 #define FCLOCK 48000000
 
