@@ -11,12 +11,12 @@
 #define OBC_DATACONTAINER_SIZE  59
 
 typedef enum Mode {ACTIVATION, DEPLOYMENT, SAFE, ADCS, NOMINAL} Mode;
-typedef enum ActivationState  {NOTDONE, DONE} ActivationState;
-typedef enum DeployState  {NORMAL, FORCED, DELAYING, DONE} DeployState;
-typedef enum ADCSState {IDLE, DETUMBLE, FAILED} ADCSState;
+typedef enum ActivationState  {UNEXPIRED, EXPIRED} ActivationState;
+typedef enum DeployState  {NORMAL, FORCED, DELAYING, DEPLOYED} DeployState;
+typedef enum ADCSState {IDLE, DETUMBLE, DISABLED} ADCSState;
 
 // Can be used in every mode for power line V2, V3 and V4
-typedef enum PowerState {INITIALIZING, NORMAL, CYCLING, OFF} PowerState;
+typedef enum PowerState {INITIALIZING, INITIALIZED, CYCLING, OFF} PowerState;
 
 class OBCDataContainer
 {
