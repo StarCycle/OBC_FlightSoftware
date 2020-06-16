@@ -6,8 +6,12 @@
  */
 
 #include "StateMachine.h"
+#include "Communication.h"
 #include "ActivationMode.h"
 #include "Console.h"
+#include "ResetService.h"
+
+extern ResetService reset(GPIO_PORT_P4, GPIO_PIN0);
 
 /**
  *
@@ -21,7 +25,16 @@
  */
 void StateMachine::run() {
 
-    //put TDEM code here
+    // put TDEM code here
+
+    // How to update the time?
+
+    // If the watch dog isn't kicked in 2.5s, OBC will be reseted
+    reset.refreshConfiguration();
+    reset.kickExternalWatchDog();
+
+
+
 
     switch(currentMode) {
         case ACTIVATION:
