@@ -15,9 +15,6 @@ HWMonitor hwMonitor(&fram);
 // Bootloader
 Bootloader bootLoader = Bootloader(fram);
 
-// Data container
-OBCDataContainer dataContainer;
-
 // CDHS bus handler
 PQ9Bus pq9bus(3, GPIO_PORT_P9, GPIO_PIN0);
 
@@ -25,8 +22,8 @@ PQ9Bus pq9bus(3, GPIO_PORT_P9, GPIO_PIN0);
 ResetService reset( GPIO_PORT_P4, GPIO_PIN0);
 
 // OBC board tasks
-StateMachine stateMachineTask(&dataContainer);
-// PeriodicTask SDCardTask(1000, SDCardAccess); // TODO
+PeriodicTask stateMachineTask(1000, StateMachine, StateMachineInit);
+// PeriodicTask SDCardTask(10000, SDCardAccess); // TODO
 Task* tasks[] = { &stateMachineTask };
 
 // TODO: remove when bug in CCS has been solved

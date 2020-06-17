@@ -10,13 +10,23 @@
 
 #define OBC_DATACONTAINER_SIZE  59
 
-typedef enum Mode {ACTIVATION, DEPLOYMENT, SAFE, ADCS, NOMINAL} Mode;
+typedef enum Mode {ACTIVATIONMODE, DEPLOYMENTMODE, SAFEMODE, ADCSMODE, NOMINALMODE} Mode;
+
+// States of Delfi-PQ in different mode
 typedef enum ActivationState  {UNEXPIRED, EXPIRED} ActivationState;
 typedef enum DeployState  {NORMAL, FORCED, DELAYING, DEPLOYED} DeployState;
 typedef enum ADCSState {IDLE, DETUMBLE, DISABLED} ADCSState;
 
 // Can be used in every mode for power line V2, V3 and V4
 typedef enum PowerState {INITIALIZING, INITIALIZED, CYCLING, OFF} PowerState;
+
+// Health check results of subsystems (TODO)
+typedef enum ADBHealthResult {ADB_BAD, ADB_GOOD} ADBHealthResult;
+typedef enum ADCSHealthResult {ADCS_BAD, ADCS_GOOD} ADCSHealthResult;
+typedef enum COMMSHealthResult {COMMS_BAD, COMMS_GOOD} COMMSHealthResult;
+typedef enum OBCHealthResult {OBC_BAD, OBC_GOOD} OBCHealthResult;
+typedef enum EPSHealthResult {EPS_BAD, EPS_GOOD} EPSHealthResult;
+typedef enum PROPHealthResult {PROP_BAD, PROP_GOOD} PROPHealthResult;
 
 class OBCDataContainer
 {
@@ -44,7 +54,7 @@ public:
     unsigned short getBatteryVoltage();
     void setBatteryVoltage(unsigned short battvolt);
 
-    //TODO: something for health check results, make enum probably
+
 
     // Variables in the activation mode
 

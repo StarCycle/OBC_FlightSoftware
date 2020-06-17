@@ -10,81 +10,73 @@
 #include "ActivationMode.h"
 #include "Console.h"
 #include "ResetService.h"
+#include "ADBTelemetryContainer.h"
+#include "ADCSTelemetryContainer.h"
+#include "COMMSTelemetryContainer.h"
+#include "EPSTelemetryContainer.h"
+#include "PROPTelemetryContainer.h"
+
+Mode currentMode;
+unsigned long upTime;
+unsigned long totalUpTime;
+unsigned long OBCBootCount;
+
+OBCDataContainer dataContainer;
+ADBTelemetryContainer ADBContainer;
+ADCSTelemetryContainer ADCSContainer;
+COMMSTelemetryContainer COMMSContainer;
+EPSTelemetryContainer EPSContainer;
+PROPTelemetryContainer PROPContainer;
 
 extern ResetService reset(GPIO_PORT_P4, GPIO_PIN0);
 
-/**
- *
- *   Define which state it should be and call relative functions.
- *   Override run() in Task.h
- *
- *   Parameters:
- *
- *   Returns:
- *
- */
-void StateMachine::run() {
+void StateMachineInit()
+{
+    // AcM-OBC-1: Load data from FRAM
 
-    // put TDEM code here
+    // AcM-OBC-2: Copy data from FRAM to the SD card
 
-    // How to update the time?
+}
 
-    // If the watch dog isn't kicked in 2.5s, OBC will be reseted
+void StateMachine()
+{
+    /* put TDEM code here */
+
+    // TDEM-OBC-6: Update time
+    upTime++;
+    totalUpTime++;
+
+    // TDEM-OBC-1: Kick the external watchdog (time window: 2.5s)
     reset.refreshConfiguration();
     reset.kickExternalWatchDog();
 
+    // TDEM-OBC-4: Request telemetry from active modules
+    RequestTelemetry(currentMode, &ADBContainer, &ADCSContainer, &COMMSContainer,
+                     &EPSContainer, &PROPContainer);
+    ADBHealthCheck(ADBContainer);
+    ADCSHealthCheck(ADCSContainer);
+    COMMSHealthCheck(COMMSContainer);
+    EPSHealthCheck(EPSContainer);
+    PROPHealthCheck(PROPContainer);
 
+    // TODO: TDEM-OBC-9: Save data in dataContainer. Save dataContainer in FRAM
 
-
-    switch(currentMode) {
-        case ACTIVATION:
-            ActivationMode();
+    switch(currentMode)
+    {
+        case ACTIVATIONMODE:
+            // ActivationMode(&dataContainer);
             break;
-        case DEPLOYMENT:
+        case DEPLOYMENTMODE:
             //run safe mode code
             break;
-        case SAFE:
+        case SAFEMODE:
             //run deployment code
             break;
-        case ADCS:
+        case ADCSMODE:
             //run ADCS code
             break;
-        case NOMINAL:
+        case NOMINALMODE:
             //run nominal mode code
             break;
      }
-}
-
-/**
- *
- *   Override notified() in Task.h so StateMachine is notified in every loop!
- *
- *   Parameters:
- *
- *   Returns:
- *      true (1)
- */
-bool StateMachine::notified() {
-    return true;
-}
-
-/**
- *
- *   Initial setting. Override setUp() in Task.h
- *
- *   Parameters:
- *
- *   Returns:
- *
- */
-void StateMachine::setUp() {
-
-    Console::log("Statemachine setup called");
-
-    currentMode = ACTIVATION; // initial mode
-    upTime = 0;
-    totalUpTime = 0; // TODO
-    OBCBootCount = 1; // TODO
-
-    // TODO: load totalUpTime & OBCBootCount from FRAM
 }
