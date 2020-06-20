@@ -5,23 +5,31 @@
  *      Author: Zhuoheng Li
  */
 
+#include "TelemetryContainer.h"
+#include "DataFrame.h"
+
+#define SERVICE_RESPONSE_ERROR      0
+#define SERVICE_RESPONSE_REQUEST    1
+#define SERVICE_RESPONSE_REPLY      2
+#define SERVICE_NO_RESPONSE         3
+
 // Address number for pq9bus
 typedef enum Address {OBC = 1, EPS = 2, ADB = 3, COMMS = 4,
     ADCS = 5, PROP = 6, DEBUG = 7, EGSE = 8, HPI = 100} Address;
 
 /**
  *
- *  Determine active modules according to current mode
+ *  Interrupt service routine when OBC gets a reply
+ *  It's registered by pq9bus.setReceiveHandler() in main.cpp
  *
  *  Parameters:
- *      Mode currentMode
- *  Returns:
- *      unsigned char *activeNum    Number of active modules except OBC
- *      unsigned char activeAddr[]  Address of these modules
- *  Note: max length of activeAddr[] is 9 (maximum number of active modules)
+ *      DataFrame &newFrame         Reference of the reply
+ *  External variables used:
+ *      bool cmdReceivedFlag        It indicates whether OBC gets a reply
+ *      PQ9Frame *receivedFrame     Address of the reply
  *
  */
-void GetActiveModules(Mode currentMode, unsigned char *activeNum, unsigned char activeAddr[]);
+void receivedCommand(DataFrame &newFrame);
 
 
 /**
@@ -33,9 +41,11 @@ void GetActiveModules(Mode currentMode, unsigned char *activeNum, unsigned char 
  *      unsigned char sentSize          Size of the payload in the sent frame
  *      unsigned char *sentPayload      Payload in the sent frame
  *      unsigned long timeLimitMS       If timeLimitMS expires and OBC doesn't get a reply,
- *                                      return -1
+ *                                      return SERVICE_NO_RESPONSE
  *   Returns:
- *      SendFrame()                     get reply (0) or no reply (-1) or unknown error (1)
+ *      RequestReply()                  SERVICE_RESPONSE_REPLY or
+ *                                      SERVICE_RESPONSE_ERROR or
+ *                                      SERVICE_NO_RESPONSE
  *      unsigned char *receivedSize     Size of the payload in the received frame
  *      unsigned char *receivedPayload  Payload in the received frame
  *
@@ -44,4 +54,32 @@ int RequestReply(Address destination, unsigned char sentSize, unsigned char *sen
                  unsigned char *receivedSize, unsigned char *receivedPayload,
                  unsigned long timeLimitMS);
 
-// void PingModule();
+/**
+ *
+ *   Ping a module
+ *
+ *   Parameters:
+ *      Address destination             Address of the target board except OBC
+ *   Returns:
+ *      PingModule()                    SERVICE_RESPONSE_REPLY or
+ *                                      SERVICE_RESPONSE_ERROR or
+ *                                      SERVICE_NO_RESPONSE
+ *
+ */
+int PingModule(Address destination);
+
+/**
+ *
+ *  Request telemetry from a specific module
+ *
+ *   Parameters:
+ *      Address destination             Address of the target board except OBC
+ *   Returns:
+ *      RequestTelemetry                SERVICE_RESPONSE_REPLY or
+ *                                      SERVICE_RESPONSE_ERROR or
+ *                                      SERVICE_NO_RESPONSE
+ *      TelemetryContainer *container   The retrieved telemetry will be copied to the container
+ *
+ */
+int RequestTelemetry(Address destination, TelemetryContainer *container);
+

@@ -28,7 +28,7 @@ COMMSTelemetryContainer COMMSContainer;
 EPSTelemetryContainer EPSContainer;
 PROPTelemetryContainer PROPContainer;
 
-extern ResetService reset(GPIO_PORT_P4, GPIO_PIN0);
+extern ResetService reset;
 
 void StateMachineInit()
 {
@@ -51,13 +51,9 @@ void StateMachine()
     reset.kickExternalWatchDog();
 
     // TDEM-OBC-4: Request telemetry from active modules
-    RequestTelemetry(currentMode, &ADBContainer, &ADCSContainer, &COMMSContainer,
-                     &EPSContainer, &PROPContainer);
-    ADBHealthCheck(ADBContainer);
-    ADCSHealthCheck(ADCSContainer);
-    COMMSHealthCheck(COMMSContainer);
-    EPSHealthCheck(EPSContainer);
-    PROPHealthCheck(PROPContainer);
+    // Testing!
+    Console::log("upTime: %d, Ping COMMS: %d", upTime, PingModule(COMMS));
+    Console::log("upTime: %d, Ping EPS: %d", upTime, PingModule(EPS));
 
     // TODO: TDEM-OBC-9: Save data in dataContainer. Save dataContainer in FRAM
 

@@ -21,16 +21,18 @@ PQ9Bus pq9bus(3, GPIO_PORT_P9, GPIO_PIN0);
 // services running in the system
 ResetService reset( GPIO_PORT_P4, GPIO_PIN0);
 
+#ifndef SW_VERSION
+SoftwareUpdateService SWupdate(fram);
+#else
+SoftwareUpdateService SWupdate(fram, (uint8_t*)xtr(SW_VERSION));
+#endif
+
 // OBC board tasks
 PeriodicTask stateMachineTask(1000, StateMachine, StateMachineInit);
 // PeriodicTask SDCardTask(10000, SDCardAccess); // TODO
+PeriodicTask* periodicTasks[] = {&stateMachineTask};
+PeriodicTaskNotifier taskNotifier = PeriodicTaskNotifier(periodicTasks, 1);
 Task* tasks[] = { &stateMachineTask };
-
-// TODO: remove when bug in CCS has been solved
-void receivedCommand(DataFrame &newFrame)
-{
-    // TODO: cmdHandler.received(newFrame);
-}
 
 /**
  * main.c
@@ -76,7 +78,7 @@ void main(void)
     reset.init();
 
     // initialize Task Notifier
-    // taskNotifier.init();
+    taskNotifier.init();
 
     // initialize HWMonitor readings
     hwMonitor.readResetStatus();

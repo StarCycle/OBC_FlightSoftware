@@ -34,9 +34,8 @@
 #include "ADCManager.h"
 #include "StateMachine.h"
 #include "OBCDataContainer.h"
+#include "Communication.h"
 
 #define FCLOCK 48000000
-
-#define ADCS_ADDRESS     5
 
 #endif /* OBC_H_ */

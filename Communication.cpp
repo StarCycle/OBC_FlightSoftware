@@ -9,63 +9,24 @@
 #include "PQ9Frame.h"
 #include "PQ9Bus.h"
 #include "Console.h"
-#include "OBCDataContainer.h"
+//#include "OBCDataContainer.h"
 #include "Communication.h"
 
-#define MAX_PAYLOAD_SIZE    255
-#define GET_REPLY           0
-#define NO_REPLY            -1
+#define MAX_PAYLOAD_SIZE            255
+#define PING_SERVICE                17
+#define HOUSEKEEPING_SERVICE        3
 
 
 volatile bool cmdReceivedFlag;
-PQ9Frame *receivedFrame;
-extern PQ9Bus pq9bus(3, GPIO_PORT_P9, GPIO_PIN0); // Defined in main.cpp
-
-
-/**
- *
- *  Determine active modules according to current mode
- *  Please read Communication.h
- *
- */
-void GetActiveModules(Mode currentMode, unsigned char *activeNum, unsigned char activeAddr[])
-{
-    if ((currentMode == ACTIVATIONMODE) || (currentMode == DEPLOYMENTMODE) || (currentMode == SAFEMODE))
-    {
-        *activeNum = 3;
-        activeAddr[0] = EPS;
-        activeAddr[1] = COMMS;
-        activeAddr[2] = ADB;
-    }
-    else if (currentMode == ADCSMODE)
-    {
-        *activeNum = 4;
-        activeAddr[0] = EPS;
-        activeAddr[1] = COMMS;
-        activeAddr[2] = ADB;
-        activeAddr[3] = ADCS;
-    }
-    else if (currentMode == NOMINALMODE) // TODO: may add payload!
-    {
-        *activeNum = 4;
-        activeAddr[0] = EPS;
-        activeAddr[1] = COMMS;
-        activeAddr[2] = ADB;
-        activeAddr[3] = ADCS;
-    }
-}
+DataFrame *receivedFrame;
+extern PQ9Bus pq9bus; // Defined in main.cpp
 
 
 /**
  *
  *  Interrupt service routine when OBC gets a reply
  *  It's registered by pq9bus.setReceiveHandler() in main.cpp
- *
- *  Parameters:
- *      DataFrame &newFrame         Reference of the reply
- *  External variables used:
- *      bool cmdReceivedFlag        It indicates whether OBC gets a reply
- *      PQ9Frame *receivedFrame     Address of the reply
+ *  Please read Communication.h
  *
  */
 void receivedCommand(DataFrame &newFrame)
@@ -115,6 +76,7 @@ int RequestReply(Address destination, unsigned char sentSize, unsigned char *sen
                  unsigned long timeLimitMS)
 {
     PQ9Frame sentFrame;
+    unsigned char serviceNum;
 
     if (sentSize > MAX_PAYLOAD_SIZE)
     {
@@ -124,6 +86,7 @@ int RequestReply(Address destination, unsigned char sentSize, unsigned char *sen
     sentFrame.setSource(OBC);
     sentFrame.setDestination(destination);
     sentFrame.setPayloadSize(sentSize);
+    serviceNum = sentPayload[0];
 
     // Copy payload to sentframe
     for (int i = 0; i < sentSize; i++)
@@ -131,25 +94,73 @@ int RequestReply(Address destination, unsigned char sentSize, unsigned char *sen
         sentFrame.getPayload()[i] = sentPayload[i];
     }
 
+    // Sent the frame
     TransmitWithTimeLimit(sentFrame, timeLimitMS);
 
-    if ((cmdReceivedFlag == true) && (receivedFrame->getSource() == destination))
+    // Check the reply
+    if ((cmdReceivedFlag == true)
+        && (receivedFrame->getPayloadSize() > 1)
+        && (receivedFrame->getSource() == destination)
+        && (receivedFrame->getPayload()[0] == serviceNum)
+        && (receivedFrame->getPayload()[1] == SERVICE_RESPONSE_REPLY))
     {
         receivedPayload = receivedFrame->getPayload();
         *receivedSize = receivedFrame->getPayloadSize();
-        return 0;
+        return SERVICE_RESPONSE_REPLY;
     }
-    else if (cmdReceivedFlag == true)
-        return -1;
+    else if (cmdReceivedFlag == false)
+        return SERVICE_NO_RESPONSE;
     else
-        return 1;
+        return SERVICE_RESPONSE_ERROR;
 }
 
+
+/**
+ *
+ *  Ping a specific module
+ *  Please read Communication.h
+ *
+ */
 int PingModule(Address destination)
 {
-    char sentPayload[2];
+    unsigned char sentPayload[2];
+    unsigned char receivedSize;
+    unsigned char *receivedPayload;
 
-    sentPayload[0] = 17; // Ping service number
-    sentPayload[0] = 1;
+    sentPayload[0] = PING_SERVICE;
+    sentPayload[1] = SERVICE_RESPONSE_REQUEST;
+
+    // The time limit is set to 100ms
+    return RequestReply(destination, 2, sentPayload, &receivedSize, receivedPayload, 100);
 }
 
+
+
+/**
+ *
+ *  Request telemetry from a specific module
+ *  Please read Communication.h
+ *
+ */
+int RequestTelemetry(Address destination, TelemetryContainer *container)
+{
+    unsigned char sentPayload[2];
+    unsigned char receivedSize;
+    unsigned char *receivedPayload;
+    int ret;
+
+    sentPayload[0] = HOUSEKEEPING_SERVICE;
+    sentPayload[1] = SERVICE_RESPONSE_REQUEST;
+
+    // The time limit is set to 100ms
+    ret = RequestReply(destination, 2, sentPayload, &receivedSize, receivedPayload, 100);
+
+    // Copy the received telemetry to the container
+    if (ret == SERVICE_RESPONSE_REPLY)
+    {
+        for (int i = 0; i < receivedSize; i++)
+            container->getArray()[i] = receivedPayload[i + 2];
+    }
+
+    return ret;
+}
