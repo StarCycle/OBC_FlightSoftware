@@ -6,80 +6,73 @@
  */
 
 #include "StateMachine.h"
+#include "Communication.h"
+#include "ActivationMode.h"
+#include "Console.h"
+#include "ResetService.h"
+#include "ADBTelemetryContainer.h"
+#include "ADCSTelemetryContainer.h"
+#include "COMMSTelemetryContainer.h"
+#include "EPSTelemetryContainer.h"
+#include "PROPTelemetryContainer.h"
 
-/**
- *
- *   Construct TaskManager, based on task
- *
- *   Parameters:
- *      const unsigned int count        Period of the task in multiples of 100ms
- *      void (*function)                The function to Execute
- *      void (*init)                    The Initializer of the Function
- *   Returns:
- *      nothing
- *
- */
-StateMachine::StateMachine(const unsigned int count, void (*function)( void ), void (&init)( void )) :
-        Task(function, init)
+Mode currentMode;
+unsigned long upTime;
+unsigned long totalUpTime;
+unsigned long OBCBootCount;
+
+OBCDataContainer dataContainer;
+ADBTelemetryContainer ADBContainer;
+ADCSTelemetryContainer ADCSContainer;
+COMMSTelemetryContainer COMMSContainer;
+EPSTelemetryContainer EPSContainer;
+PROPTelemetryContainer PROPContainer;
+
+extern ResetService reset;
+
+void StateMachineInit()
 {
-    this->StateMachineCount = count;
+    // AcM-OBC-1: Load data from FRAM
+
+    // AcM-OBC-2: Copy data from FRAM to the SD card
+
 }
 
-/**
- * Run TaskManager
- * Function which reads the state and
- * according to this state runs the corresponding
- * task
- */
+void StateMachine()
+{
+    /* put TDEM code here */
 
-void StateMachine::run() {
-    switch(CurrentState) {
-    case ACTIVATION:
-        //put TDEM code here
-        activation::Activation();
-        break;
-    case SAFE:
-        //put TDEM code here
-        //run safe mode code
-        break;
-    case DEPLOYMENT:
-        //put TDEM code here
-        //run deployment code
-        break;
-    case ADCS:
-        //put TDEM code here
-        //run ADCS code
-        break;
-    case NOMINAL:
-        //put TDEM code here
-        //run nominal mode code
-        break;
+    // TDEM-OBC-6: Update time
+    upTime++;
+    totalUpTime++;
+
+    // TDEM-OBC-1: Kick the external watchdog (time window: 2.5s)
+    reset.refreshConfiguration();
+    reset.kickExternalWatchDog();
+
+    // TDEM-OBC-4: Request telemetry from active modules
+    // Testing!
+    Console::log("upTime: %d, Ping COMMS: %d", upTime, PingModule(COMMS));
+    Console::log("upTime: %d, Ping EPS: %d", upTime, PingModule(EPS));
+
+    // TODO: TDEM-OBC-9: Save data in dataContainer. Save dataContainer in FRAM
+
+    switch(currentMode)
+    {
+        case ACTIVATIONMODE:
+            // ActivationMode(&dataContainer);
+            break;
+        case DEPLOYMENTMODE:
+            //run safe mode code
+            break;
+        case SAFEMODE:
+            //run deployment code
+            break;
+        case ADCSMODE:
+            //run ADCS code
+            break;
+        case NOMINALMODE:
+            //run nominal mode code
+            break;
      }
-}
-
-/*
- * Setup TaskManager task
- * An instance is created of the class
- */
-
-void StateMachine::SetUp() {
-#ifndef TESTING
-    console::log("Statemachine setup called");
-#endif
-    (*StateMachineTask).CurrentState = ACTIVATION;
-
-    activation::TimerDone = false;
-    //Read TimerDone status from SD
-
-    //read uptime from SD or smth to make sure it is not the uptime since last reboot
-    //but since beginning
-    //upTimeSD = ReadSD[7];
-    //checks if there is a value at the described position, might have to be done
-    //differently as there is probably a random value at specified location
-//    if(upTimeSD > 0) {
-//
-//        upTime = upTimeSD;
-//    }
-//    else
-        upTime = 0;
 }
