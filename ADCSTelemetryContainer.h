@@ -1,5 +1,5 @@
 /*
- * EPSTelemetryContainer.h
+ * ADCSTelemetryContainer.h
  *
  *  Created on: 5 Aug 2019
  *      Author: stefanosperett

@@ -77,7 +77,7 @@ void StateMachine()
     switch(currentMode)
     {
         case ACTIVATIONMODE:
-            // ActivationMode(&dataContainer);
+            Activation(currentMode, OBCBootCount, totalUpTime);
             break;
         case DEPLOYMENTMODE:
             //run safe mode code

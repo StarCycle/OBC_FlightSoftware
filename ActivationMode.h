@@ -1,13 +1,21 @@
 /*
- *  ActivationMode.h
+ * ActivationMode.hpp
  *
- *  Created on: June 10, 2020
- *      Author: Zhuoheng Li
+ *  Created on: May 20, 2020
+ *      Author: tom-h
  */
+#ifndef ACTIVATIONMODE_HPP_
+#define ACTIVATIONMODE_HPP_
 
-#ifndef ACTIVATIONMODE_H_
-#define ACTIVATIONMODE_H_
+#include "StateMachine.h"
+#include "Communication.h"
+#include "OBCDataContainer.h"
+#include "MB85RS.h"
 
-void ActivationMode();
+//Function to be called from statemachine
+void Activation(Mode currentMode, unsigned long bootcount, unsigned long uptime);
 
-#endif /* ACTIVATIONMODE_H_ */
+
+
+#endif /* ACTIVATIONMODE_HPP_ */
+
