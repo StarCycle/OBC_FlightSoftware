@@ -47,10 +47,10 @@ bool CommandEPS() {
             | (static_cast<uint32_t>(stateoff));
 
     //Send to EPS
-    int Success1 = RequestReply(EPS, 7, (unsigned char*)&On1, &ReplySize, &Reply, 500);
-    int Success2 = RequestReply(EPS, 7, (unsigned char*)&Off2, &ReplySize, &Reply, 500);
-    int Success3 = RequestReply(EPS, 7, (unsigned char*)&Off3, &ReplySize, &Reply, 500);
-    int Success4 = RequestReply(EPS, 7, (unsigned char*)&Off4, &ReplySize, &Reply, 500);
+    int Success1 = RequestReply(EPS, 4, (unsigned char*)&On1, &ReplySize, &Reply, 500);
+    int Success2 = RequestReply(EPS, 4, (unsigned char*)&Off2, &ReplySize, &Reply, 500);
+    int Success3 = RequestReply(EPS, 4, (unsigned char*)&Off3, &ReplySize, &Reply, 500);
+    int Success4 = RequestReply(EPS, 4, (unsigned char*)&Off4, &ReplySize, &Reply, 500);
 
     if (Success1 ==1 && Success2 ==1 && Success3 ==1 && Success4 ==1) {
         fault = false;
